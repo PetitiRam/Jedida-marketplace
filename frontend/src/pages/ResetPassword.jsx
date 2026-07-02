@@ -1,62 +1,106 @@
-import { useState } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import AuthLayout from '../components/AuthLayout';
-import client from '../api/client';
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import client from "../api/client";
 
 export default function ResetPassword() {
-  const [params] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const uid = params.get('uid');
-  const token = params.get('token');
 
-  const [newPassword, setNewPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState("loading");
+  const [newPassword, setNewPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const handleSubmit = async (e) => {
+  const query = new URLSearchParams(location.search);
+  const token = query.get("token");
+  const email = query.get("email");
+
+  // 🔥 STEP 1: verify link
+  useEffect(() => {
+    const verify = async () => {
+      if (!token || !email) {
+        setStatus("invalid");
+        return;
+      }
+
+      try {
+        await client.post("/auth/verify-reset-token", {
+          token,
+          email,
+        });
+
+        setStatus("valid");
+      } catch (err) {
+        setStatus("invalid");
+      }
+    };
+
+    verify();
+  }, [token, email]);
+
+  // 🔥 STEP 2: reset password
+  const handleReset = async (e) => {
     e.preventDefault();
-    setError('');
-    if (newPassword !== confirm) {
-      setError('Passwords do not match.');
-      return;
-    }
-    setLoading(true);
+
+    setStatus("resetting");
+
     try {
-      await client.post('/auth/reset-password', { uid, token, newPassword });
-      navigate('/signin');
+      await client.post("/auth/reset-password", {
+        email,
+        token,
+        newPassword,
+      });
+
+      setStatus("success");
+
+      setTimeout(() => {
+        navigate("/signin");
+      }, 1500);
     } catch (err) {
-      setError(err.response?.data?.error || 'Could not reset password. The link may have expired.');
-    } finally {
-      setLoading(false);
+      setError("Failed to reset password");
+      setStatus("valid");
     }
   };
 
   return (
-    <AuthLayout>
-      <div className="eyebrow">Account recovery</div>
-      <h1>Choose a new password</h1>
-      <p className="hint">Make it at least 8 characters.</p>
+    <div className="auth-container">
+      <h2>Reset Password</h2>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {status === "loading" && <p>Checking reset link...</p>}
 
-      <form onSubmit={handleSubmit}>
-        <div className="field-group">
-          <label htmlFor="newPassword">New password</label>
-          <input id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} />
-        </div>
-        <div className="field-group">
-          <label htmlFor="confirm">Confirm new password</label>
-          <input id="confirm" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} />
-        </div>
-        <button className="btn-primary" type="submit" disabled={loading}>
-          {loading ? 'Saving…' : 'Reset password'}
-        </button>
-      </form>
+      {status === "invalid" && (
+        <p style={{ color: "red" }}>
+          Reset link is invalid or expired
+        </p>
+      )}
 
-      <p className="auth-footer-note">
-        <Link to="/signin" className="btn-link">Back to sign in</Link>
-      </p>
-    </AuthLayout>
+      {status === "valid" && (
+        <form onSubmit={handleReset}>
+          <label>New Password</label>
+
+          <input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Enter new password"
+          />
+
+          {error && <p style={{ color: "red" }}>{error}</p>}
+
+          <button type="submit">
+            Reset Password
+          </button>
+        </form>
+      )}
+
+      {status === "resetting" && (
+        <p>Resetting password...</p>
+      )}
+
+      {status === "success" && (
+        <p style={{ color: "green" }}>
+          Password reset successful. Redirecting...
+        </p>
+      )}
+    </div>
   );
 }

@@ -1,11 +1,12 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET?.trim();
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET?.trim();
 
 if (!ACCESS_SECRET || !REFRESH_SECRET) {
-  throw new Error('JWT secrets missing in environment');
+  throw new Error(
+    "Missing JWT secrets. Check .env (JWT_ACCESS_SECRET, JWT_REFRESH_SECRET)"
+  );
 }
 export function generateAccessToken(user) {
   if (!user?.id) throw new Error('generateAccessToken: user.id missing');

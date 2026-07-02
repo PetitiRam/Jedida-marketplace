@@ -1,19 +1,20 @@
-import { Pool } from 'pg';
-import dotenv from 'dotenv';
-dotenv.config();
+import pg from "pg";
 
-export const pool = new Pool({
-  host: process.env.PGHOST,
-  port: Number(process.env.PGPORT || 5432),
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  database: process.env.PGDATABASE,
-  max: 10,
-  idleTimeoutMillis: 30000
+const { Pool } = pg;
+
+const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: Number(process.env.DB_PORT || 5432),
+  ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
 });
 
-pool.on('error', (err) => {
-  console.error('Unexpected PostgreSQL pool error:', err);
-});
-
+// safe wrapper used everywhere
 export const query = (text, params) => pool.query(text, params);
+
+// export pool ONLY if needed elsewhere
+export { pool };
+
+export default pool;

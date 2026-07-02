@@ -1,16 +1,39 @@
-import express from 'express';
+import express from "express";
 import {
   signup,
   signin,
+  requestEmailCode,
+  verifyEmailCode,
   verifySigninOtp,
-  refresh
-} from '../controllers/authController.js';
-                 
+ forgotPassword, 
+requestPasswordReset,
+  verifyResetToken,
+  resetPassword
+} from "../controllers/authController.js";
+
 const router = express.Router();
 
-router.post('/signup', signup);
-router.post('/signin', signin);
-router.post('/verify-signin-otp', verifySigninOtp);
-router.post('/refresh', refresh);
+/**
+ * AUTH FLOW
+ */
+
+// Signup
+router.post("/signup", signup);
+
+// Signin (password → OTP step)
+router.post("/signin", signin);
+
+// Email verification (account creation)
+router.post("/request-email-code", requestEmailCode);
+router.post("/verify-email-code", verifyEmailCode);
+
+// Signin OTP verification (login completion)
+router.post("/verify-signin-otp", verifySigninOtp);
+router.post("/forgot-password", forgotPassword);
+router.post("/request-password-reset", requestPasswordReset);
+
+router.post("/verify-reset-token", verifyResetToken);
+
+router.post("/reset-password", resetPassword);
 
 export default router;

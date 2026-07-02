@@ -1,14 +1,28 @@
-import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
 import client from '../api/client';
+import { useEffect, useState } from 'react';
+import { getCountries, getCitiesByCountry } from '../api/geo';
 
 export default function SignUp() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    fullName: '', email: '', phoneNumber: '', locationCountry: '', locationCity: '',
-    password: '', confirmPassword: ''
-  });
+const [countries, setCountries] = useState([]);
+const [cities, setCities] = useState([]);
+
+const [form, setForm] = useState({
+  fullName: '',
+  email: '',
+  phoneNumber: '',
+  dialCode: '',
+  locationCountry: '',
+  locationCity: '',
+  password: '',
+  confirmPassword: ''
+});
+
+const [loadingCities, setLoadingCities] = useState(false);
+ 
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -23,23 +37,62 @@ export default function SignUp() {
     }
     setLoading(true);
     try {
-      const { data } = await client.post('/auth/signup', {
+const fullPhoneNumber = `${form.dialCode}${form.phoneNumber}`;      
+const { data } = await client.post('/auth/signup', {
         fullName: form.fullName,
         email: form.email,
-        phoneNumber: form.phoneNumber,
+        phoneNumber: fullPhoneNumber,
         locationCountry: form.locationCountry,
         locationCity: form.locationCity,
         password: form.password
       });
       localStorage.setItem('jedida_access_token', data.accessToken);
-      localStorage.setItem('jedida_refresh_token', data.refreshToken);
-      navigate('/verify-phone');
+     navigate('/signin');
     } catch (err) {
       setError(err.response?.data?.error || 'Could not create your account. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+useEffect(() => {
+  const loadCountries = async () => {
+    try {
+      const res = await fetch(
+        "https://countriesnow.space/api/v0.1/countries/iso"
+      );
+
+      const json = await res.json();
+
+      console.log("RAW API:", json);
+
+      const list = json?.data?.map((c) => c.name) || [];
+
+      console.log("COUNTRY LIST:", list);
+
+      setCountries(list);
+    } catch (err) {
+      console.error("Country load failed:", err);
+    }
+  };
+
+  loadCountries();
+}, []);
+useEffect(() => {
+  const loadCities = async () => {
+    if (!form.locationCountry) return;
+
+    try {
+      const data = await getCitiesByCountry(form.locationCountry);
+      setCities(data);
+    } catch (err) {
+      console.error("Cities failed to load:", err);
+      setCities([]);
+    }
+  };
+
+  loadCities();
+}, [form.locationCountry]);
 
   return (
     <AuthLayout>
@@ -52,28 +105,63 @@ export default function SignUp() {
       <form onSubmit={handleSubmit}>
         <div className="field-group">
           <label htmlFor="fullName">Full name</label>
-          <input id="fullName" placeholder="e.g. Joseph Nsubuga" value={form.fullName} onChange={update('fullName')} required />
+          <input id="fullName" placeholder="e.g. Joe Doe" value={form.fullName} onChange={update('fullName')} required />
         </div>
-
-        <div className="field-group">
+                                                                
+         <div className="field-group">
           <label htmlFor="email">Email address</label>
           <input id="email" type="email" placeholder="you@example.com" value={form.email} onChange={update('email')} required />
         </div>
 
         <div className="field-group">
           <label htmlFor="phoneNumber">Phone number</label>
-          <input id="phoneNumber" type="tel" placeholder="+256 7XX XXX XXX" value={form.phoneNumber} onChange={update('phoneNumber')} required />
-        </div>
 
-        <div className="field-row">
-          <div className="field-group">
-            <label htmlFor="locationCountry">Country</label>
-            <input id="locationCountry" placeholder="Uganda" value={form.locationCountry} onChange={update('locationCountry')} />
-          </div>
-          <div className="field-group">
-            <label htmlFor="locationCity">City</label>
-            <input id="locationCity" placeholder="Kampala" value={form.locationCity} onChange={update('locationCity')} />
-          </div>
+<div className="phone-group">
+  <input
+    type="tel"
+    placeholder="Phone number"
+    value={form.phoneNumber}
+    onChange={update('phoneNumber')}
+    required
+  />
+</div>
+<select
+  value={form.locationCountry}
+  onChange={(e) =>
+    setForm({
+      ...form,
+      locationCountry: e.target.value,
+      locationCity: ""
+    })
+  }
+>
+  <option value="">Select country</option>
+
+  {countries.map((country) => (
+    <option key={country} value={country}>
+      {country}
+    </option>
+  ))}
+</select>
+
+<select
+  value={form.locationCity}
+  onChange={(e) =>
+    setForm({ ...form, locationCity: e.target.value })
+  }
+  disabled={!form.locationCountry}
+>
+  <option value="">
+    {form.locationCountry ? "Select city" : "Select country first"}
+  </option>
+
+  {cities?.map((city) => (
+    <option key={city} value={city}>
+      {city}
+    </option>
+  ))}
+</select>
+
         </div>
 
         <div className="field-group">
