@@ -3,7 +3,10 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import healthRoutes from "./routes/health.js";
 
+
+import { apiLimiter } from "./middleware/rateLimit.js";
 import authRoutes from './routes/auth.js';
 import upgradeRoutes from './routes/upgrade.js';
 import shopRoutes from './routes/shops.js';
@@ -30,7 +33,9 @@ const app = express();
 app.use(helmet());
 app.use(cors({ origin: process.env.FRONTEND_URL || '*', credentials: true }));
 app.use(express.json());
-app.use(morgan('dev'));
+app.use(apiLimiter);
+app.use(morgan(":method :url :status :response-time ms"));
+app.use("/api", healthRoutes);
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

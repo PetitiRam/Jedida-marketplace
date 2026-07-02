@@ -1,4 +1,5 @@
 import express from "express";
+import { authLimiter } from "../middleware/rateLimit.js";
 import {
   signup,
   signin,
@@ -20,10 +21,9 @@ const router = express.Router();
 // Signup
 router.post("/signup", signup);
 
-// Signin (password → OTP step)
-router.post("/signin", signin);
 
 // Email verification (account creation)
+router.post("/signin", authLimiter, signin);
 router.post("/request-email-code", requestEmailCode);
 router.post("/verify-email-code", verifyEmailCode);
 

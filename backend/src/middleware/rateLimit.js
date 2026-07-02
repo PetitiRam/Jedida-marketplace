@@ -1,17 +1,19 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit from "express-rate-limit";
 
-export const otpLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 3,
-  message: { error: 'Too many OTP requests. Try later.' }
-});
-// Login rate limiter
-export const loginLimiter = rateLimit({
+// General API limiter
+export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // limit each IP to 10 requests per window
+  max: 200, // normal users
   message: {
-    error: "Too many login attempts. Please try again after 15 minutes."
+    error: "Too many requests, please try again later."
   },
   standardHeaders: true,
   legacyHeaders: false
+});
+export const authLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 20, // prevent brute force
+  message: {
+    error: "Too many auth attempts. Try again later."
+  }
 });
